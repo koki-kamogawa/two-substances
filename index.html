@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two Substances — Intelligence, made of matter.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F1EA; --paper-deep:#ECE7DC;
+    --ink:#16140F; --ink-soft:#3A372F;
+    --gray:#8A8478; --shu:#C8442A;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--paper)}
+  body{font-family:"Noto Serif JP",serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+
+  /* === ステージ（1280x720 を画面に fit）=== */
+  #stage{
+    position:fixed;left:50%;top:50%;
+    width:1280px;height:720px;
+    transform:translate(-50%,-50%);
+    transform-origin:center center;
+    background:var(--paper);
+    overflow:hidden;
+  }
+  #gl{position:absolute;inset:0;width:1280px;height:720px;display:block}
+
+  /* === HUD（DOMの明朝文字・3Dの手前）=== */
+  #hud{position:absolute;inset:0;pointer-events:none}
+  .scene{
+    position:absolute;inset:0;
+    opacity:0;visibility:hidden;
+    transition:opacity .5s ease;
+  }
+  .scene.active{opacity:1;visibility:visible}
+  .scene .el{opacity:0;transform:translateY(8px);transition:opacity .55s ease,transform .55s ease}
+  .scene.active .el{opacity:1;transform:none}
+
+  /* 文字スタイル体系（設計書§4） */
+  .display{font-size:74px;font-weight:600;line-height:1.34;letter-spacing:.01em}
+  .chapter{font-size:62px;font-weight:600;line-height:1.3}
+  .punch{font-size:42px;font-weight:600;line-height:1.4}
+  .lead{font-size:24px;color:var(--gray);line-height:1.7;font-weight:400}
+  .label{font-family:"Fraunces",serif;font-size:18px;letter-spacing:.12em;color:var(--gray);font-weight:600}
+  .caption{font-size:18px;color:var(--gray);line-height:1.6;font-weight:400}
+  .gray{color:var(--gray)}
+  .shu{color:var(--shu)}
+
+  /* レイアウトユーティリティ */
+  .pad{position:absolute}
+  .L72{left:72px}.R72{right:72px;text-align:right}
+  .T64{top:64px}.B64{bottom:64px}
+  .center-block{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;width:1040px}
+  .center-block .el{transform:translateY(8px)}
+  .center-block.active .el{transform:none}
+
+  .meta-name{position:absolute;right:72px;bottom:56px;text-align:right}
+
+  .duo-left{position:absolute;left:96px;bottom:120px;width:380px}
+  .duo-right{position:absolute;right:96px;bottom:120px;width:380px;text-align:right}
+
+  .map-list{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:left}
+  .map-list .row{display:flex;align-items:baseline;gap:24px;margin:14px 0}
+  .map-list .row .n{font-family:"Fraunces",serif;font-size:18px;color:var(--gray);letter-spacing:.1em;width:42px}
+  .map-list .row .t{font-size:30px;font-weight:600}
+
+  .kicker{position:absolute;left:72px;top:72px}
+  .before-box{position:absolute;left:72px;top:240px;width:430px}
+  .before-box .ttl{font-family:"Fraunces",serif;font-size:18px;letter-spacing:.12em;color:var(--gray);margin-bottom:14px}
+  .before-box .txt{font-size:23px;color:var(--gray);line-height:1.7;font-weight:400}
+  .after-box{position:absolute;right:72px;bottom:120px;width:560px;text-align:right}
+  .after-box .punch{margin-bottom:14px}
+  .guard{position:absolute;left:72px;bottom:48px;width:760px;font-size:16px;color:var(--gray);line-height:1.5}
+
+  .ink-cap{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);text-align:center;width:780px}
+  .ink-cap .h{font-size:38px;font-weight:600;color:var(--paper)}
+  .ink-cap .d{font-size:20px;color:#B7B2A6;margin-top:10px;font-weight:400}
+
+  .split-table{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:880px}
+  .split-table .row{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin:12px 0}
+  .split-table .cell{padding:18px 24px;border-top:1px solid rgba(22,20,15,.12)}
+  .split-table .who{font-family:"Fraunces",serif;font-size:17px;letter-spacing:.1em;color:var(--shu);margin-bottom:8px}
+  .split-table .what{font-size:21px;font-weight:600;line-height:1.5}
+  .split-note{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);text-align:center}
+
+  .scene.on-dark .display,.scene.on-dark .chapter,.scene.on-dark .punch,.scene.on-dark .lead,.scene.on-dark .caption{color:var(--paper)}
+  .scene.on-dark .gray{color:#B7B2A6}
+
+  #grain{position:absolute;inset:0;pointer-events:none;opacity:.035;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");}
+  #vignette{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 75% 70% at 50% 48%, transparent 60%, rgba(22,20,15,.10) 100%);}
+
+  #progress{position:absolute;left:72px;bottom:32px;font-family:"Fraunces",serif;font-size:14px;color:var(--gray);letter-spacing:.18em;opacity:.7}
+
+  #loader{position:fixed;inset:0;background:var(--paper);display:flex;align-items:center;justify-content:center;z-index:50;transition:opacity .8s ease}
+  #loader .lt{font-family:"Fraunces",serif;font-size:16px;letter-spacing:.3em;color:var(--gray);opacity:.6}
+  #loader.gone{opacity:0;pointer-events:none}
+
+  #fallback{display:none}
+
+  @media print{
+    @page{size:1280px 720px;margin:0}
+    html,body{overflow:visible;height:auto}
+    #stage,#gl,#hud,#grain,#vignette,#progress,#loader{display:none!important}
+    #fallback{display:block!important}
+    .poster{
+      width:1280px;height:720px;position:relative;page-break-after:always;
+      background:var(--paper);color:var(--ink);overflow:hidden;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;
+      padding:72px;display:flex;flex-direction:column;justify-content:center;
+    }
+    .poster.dark{background:var(--ink);color:var(--paper)}
+    .poster .pdisp{font-size:64px;font-weight:600;line-height:1.34}
+    .poster .plead{font-size:22px;color:var(--gray);margin-top:24px;line-height:1.7}
+    .poster .pshu{color:var(--shu)}
+    .poster.dark .plead{color:#B7B2A6}
+  }
+  body.no-webgl #stage,body.no-webgl #grain,body.no-webgl #vignette,body.no-webgl #progress,body.no-webgl #loader{display:none}
+  body.no-webgl{overflow:auto}
+  body.no-webgl #fallback{display:block}
+  body.no-webgl .poster{
+    width:1280px;height:720px;position:relative;margin:0 auto 8px;
+    background:var(--paper);color:var(--ink);overflow:hidden;
+    padding:72px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 2px 20px rgba(0,0,0,.08);
+  }
+  body.no-webgl .poster.dark{background:var(--ink);color:var(--paper)}
+  body.no-webgl .poster .pdisp{font-size:60px;font-weight:600;line-height:1.34}
+  body.no-webgl .poster .plead{font-size:22px;color:var(--gray);margin-top:24px;line-height:1.7}
+  body.no-webgl .poster .pshu{color:var(--shu)}
+  body.no-webgl .poster.dark .plead{color:#B7B2A6}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <div id="hud"></div>
+  <div id="grain"></div>
+  <div id="vignette"></div>
+  <div id="progress">01 / 13</div>
+</div>
+
+<div id="loader"><div class="lt">TWO SUBSTANCES</div></div>
+
+<div id="fallback"></div>
+
+<!-- Three.js r137 UMD（グローバル window.THREE）＋ examples/js postprocessing。
+     ESM/importmap は gistpreview の document.write 方式で効かないため UMD 同期ロードで自己完結する。 -->
+<script src="https://unpkg.com/three@0.137.0/build/three.min.js"></script>
+<script src="https://unpkg.com/three@0.137.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://unpkg.com/three@0.137.0/examples/js/shaders/BokehShader.js"></script>
+<script src="https://unpkg.com/three@0.137.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://unpkg.com/three@0.137.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://unpkg.com/three@0.137.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://unpkg.com/three@0.137.0/examples/js/postprocessing/BokehPass.js"></script>
+
+<script>
+// =====================================================================
+//  TWO SUBSTANCES — Intelligence, made of matter.
+//  ART_DIRECTION_V5 忠実実装 / 単一HTML自己完結 / 60fps予算厳守
+//  UMDグローバル THREE 方式（ESM/importmap不使用）
+// =====================================================================
+
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NAME = '{NAME}';
+const SCENES = [
+  { id:'S1',  dark:false }, { id:'S2',  dark:false }, { id:'S3',  dark:false },
+  { id:'S4',  dark:false }, { id:'S5',  dark:false }, { id:'S6',  dark:false },
+  { id:'S7',  dark:false }, { id:'S8',  dark:false }, { id:'S9',  dark:true  },
+  { id:'S10', dark:true  }, { id:'S11', dark:false }, { id:'S12', dark:false },
+  { id:'S13', dark:false },
+];
+const N = SCENES.length;
+
+// simplex noise GLSL（頂点シェーダ用）
+const noiseGLSL = `
+vec3 mod289(vec3 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 mod289(vec4 x){return x-floor(x*(1.0/289.0))*289.0;}
+vec4 permute(vec4 x){return mod289(((x*34.0)+1.0)*x);}
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float snoise(vec3 v){
+  const vec2 C=vec2(1.0/6.0,1.0/3.0); const vec4 D=vec4(0.0,0.5,1.0,2.0);
+  vec3 i=floor(v+dot(v,C.yyy)); vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz); vec3 l=1.0-g; vec3 i1=min(g.xyz,l.zxy); vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx; vec3 x2=x0-i2+C.yyy; vec3 x3=x0-D.yyy;
+  i=mod289(i);
+  vec4 p=permute(permute(permute(i.z+vec4(0.0,i1.z,i2.z,1.0))+i.y+vec4(0.0,i1.y,i2.y,1.0))+i.x+vec4(0.0,i1.x,i2.x,1.0));
+  float n_=0.142857142857; vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.0*floor(p*ns.z*ns.z);
+  vec4 x_=floor(j*ns.z); vec4 y_=floor(j-7.0*x_);
+  vec4 x=x_*ns.x+ns.yyyy; vec4 y=y_*ns.x+ns.yyyy; vec4 h=1.0-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy); vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.0+1.0; vec4 s1=floor(b1)*2.0+1.0; vec4 sh=-step(h,vec4(0.0));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy; vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x); vec3 p1=vec3(a0.zw,h.y); vec3 p2=vec3(a1.xy,h.z); vec3 p3=vec3(a1.zw,h.w);
+  vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+  vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
+  return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+}`;
+
+// ---- 共通：HUDとポスターを生成 ----
+buildHUD();
+buildPosters();
+
+function webglOK(){
+  try{
+    const c=document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && (c.getContext('webgl2')||c.getContext('webgl')));
+  }catch(e){ return false; }
+}
+
+function __start(){
+  if(window.__booted) return; window.__booted=true;
+  if(!webglOK() || typeof THREE==='undefined'){
+    document.body.classList.add('no-webgl');
+    document.getElementById('loader').classList.add('gone');
+    return;
+  }
+  try{ boot(); }
+  catch(err){
+    console.error('boot failed', err);
+    window.__booted=false;
+    document.body.classList.add('no-webgl');
+    document.getElementById('loader').classList.add('gone');
+  }
+}
+// イベント非依存で直接起動：このスクリプトはbody末尾、THREE等は読込済み(parser-blocking)、DOMも上方に存在。
+// gistpreview等のdocument.write注入では readyState が永遠に loading のまま＝load/DOMContentLoadedが来ないため、
+// 直接呼ぶのが唯一確実。二重起動は __booted ガードで防ぐ。
+__start();
+window.addEventListener('load', __start);
+window.addEventListener('DOMContentLoaded', __start);
+
+// =====================================================================
+//  メイン
+// =====================================================================
+function boot(){
+  const canvas=document.getElementById('gl');
+  const W=1280,H=720;
+
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  renderer.setSize(W,H,false);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.05;
+
+  const scene=new THREE.Scene();
+  const PAPER=new THREE.Color('#F4F1EA');
+  const INK=new THREE.Color('#16140F');
+  scene.background=PAPER.clone();
+  scene.fog=new THREE.FogExp2(PAPER.clone(),0.036);
+
+  const camera=new THREE.PerspectiveCamera(38,W/H,0.1,100);
+  camera.position.set(0,0.4,8);
+
+  const hemi=new THREE.HemisphereLight(0xfff8ec,0xece7dc,0.85); scene.add(hemi);
+  const key=new THREE.DirectionalLight(0xfff4e2,1.15); key.position.set(3.5,6,4); scene.add(key);
+  const fill=new THREE.DirectionalLight(0xeae4d6,0.35); fill.position.set(-4,1,2); scene.add(fill);
+
+  const envMap=makeStudioEnv();
+  scene.environment=envMap;
+
+  const metal=makeMetal(envMap); scene.add(metal.mesh);
+  const ink=makeInk();           scene.add(ink.points);
+  const cast=makeCast(envMap);   scene.add(cast.mesh); cast.mesh.visible=false;
+  const spine=makeSpine(envMap); scene.add(spine.mesh); spine.mesh.visible=false;
+
+  metal.mesh.position.set(-2.6,0,0);
+  ink.points.position.set(2.6,0,0);
+
+  // ポストプロセス：DoF + Grain+Vignette（Bloom禁止）
+  let composer=null,bokehPass=null,gv=null;
+  try{
+    composer=new THREE.EffectComposer(renderer);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    composer.setSize(W,H);
+    composer.addPass(new THREE.RenderPass(scene,camera));
+    bokehPass=new THREE.BokehPass(scene,camera,{focus:8.0,aperture:0.0016,maxblur:0.012,width:W,height:H});
+    composer.addPass(bokehPass);
+    gv=new THREE.ShaderPass({
+      uniforms:{tDiffuse:{value:null},uTime:{value:0},uGrain:{value:0.04}},
+      vertexShader:`varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+      fragmentShader:`
+        uniform sampler2D tDiffuse; uniform float uTime,uGrain; varying vec2 vUv;
+        float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+        void main(){
+          vec4 c=texture2D(tDiffuse,vUv);
+          float g=(hash(vUv*vec2(1920.0,1080.0)+uTime)-0.5)*uGrain; c.rgb+=g;
+          vec2 d=vUv-0.5; float vig=smoothstep(0.9,0.35,dot(d,d)*1.9);
+          c.rgb*=mix(0.9,1.0,vig);
+          gl_FragColor=c;
+        }`
+    });
+    gv.renderToScreen=true;
+    composer.addPass(gv);
+  }catch(e){ console.warn('postprocess unavailable',e); composer=null; }
+
+  // カメラの旅（13停留点）
+  const CAM={
+    S1:{pos:[-2.6,0.25,4.4],look:[-2.6,0.2,0]},
+    S2:{pos:[0,0.5,8.6],look:[0,0.1,0]},
+    S3:{pos:[0,7.2,1.2],look:[0,0,0]},
+    S4:{pos:[-2.3,0.2,4.2],look:[-2.6,0.1,0]},
+    S5:{pos:[-2.6,0.15,3.5],look:[-2.6,0.1,0]},
+    S6:{pos:[-2.55,0.30,3.4],look:[-2.6,0.1,0]},
+    S7:{pos:[-2.6,0.10,3.6],look:[-2.6,0.1,0]},
+    S8:{pos:[-2.6,0.20,3.4],look:[-2.6,0.1,0]},
+    S9:{pos:[0,0.3,6.2],look:[0,0.1,0]},
+    S10:{pos:[2.6,0.2,4.0],look:[2.6,0.0,0]},
+    S11:{pos:[0,0.5,8.6],look:[0,0.1,0]},
+    S12:{pos:[0,0.2,5.2],look:[0,0.05,0]},
+    S13:{pos:[0,5.6,2.4],look:[0,0.2,0]},
+  };
+
+  let idx=0;
+  const camPos=new THREE.Vector3().fromArray(CAM.S1.pos);
+  const camLook=new THREE.Vector3().fromArray(CAM.S1.look);
+  const camPosT=camPos.clone(), camLookT=camLook.clone();
+  camera.position.copy(camPos); camera.lookAt(camLook);
+
+  const fogColT=PAPER.clone(); let fogDensT=0.036;
+  const react={metalSettle:0,metalSettleT:0,inkAlign:0,inkAlignT:0,inkPattern:0,spineRise:0,spineRiseT:0,duoTouch:0,duoTouchT:0};
+  let inkAutoTimer=0;
+
+  const castLatin={S1:'half',S5:'minutes',S7:'outline',S8:'regex'};
+
+  function applyScene(i,immediate){
+    const s=SCENES[i], cam=CAM[s.id];
+    camPosT.fromArray(cam.pos); camLookT.fromArray(cam.look);
+    if(i===8||i===9){ fogColT.copy(INK); fogDensT=(i===8?0.085:0.05); }
+    else { fogColT.copy(PAPER); fogDensT=0.036; }
+
+    react.metalSettleT=0; react.inkAlignT=0; react.spineRiseT=0; react.duoTouchT=0;
+    cast.mesh.visible=false;
+
+    if(['S1','S5','S7','S8'].includes(s.id)){
+      react.metalSettleT=1;
+      cast.setText(castLatin[s.id], s.id==='S1'?1.0:0.78);
+      cast.mesh.position.set(metal.mesh.position.x,0.95,1.1);
+      cast.mesh.visible=true;
+    }
+    if(s.id==='S6'){ react.metalSettleT=1; }
+    if(s.id==='S10'){ react.inkAlignT=1; react.inkPattern=0; ink.setPattern(0); updateInkCaption(0); }
+    if(s.id==='S13'){ react.spineRiseT=1; }
+    if(s.id==='S12'){ react.duoTouchT=1; }
+
+    if(immediate||REDUCED){
+      camPos.copy(camPosT); camLook.copy(camLookT);
+      react.metalSettle=react.metalSettleT; react.inkAlign=react.inkAlignT;
+      react.spineRise=react.spineRiseT; react.duoTouch=react.duoTouchT;
+      scene.fog.color.copy(fogColT); scene.fog.density=fogDensT; scene.background.copy(fogColT);
+    }
+    updateHUD(i);
+  }
+
+  applyScene(0,true);
+
+  function go(n){ n=Math.max(0,Math.min(N-1,n)); if(n===idx)return; idx=n; inkAutoTimer=0; applyScene(idx,REDUCED); }
+  function next(){ go(idx+1); } function prev(){ go(idx-1); }
+
+  window.addEventListener('keydown',(e)=>{
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'||e.key==='PageDown'){e.preventDefault();next();}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev();}
+    else if(e.key>='1'&&e.key<='9'){go(parseInt(e.key)-1);}
+    else if(e.key==='0'){go(9);}
+    else if(e.key==='-'){go(10);}else if(e.key==='='){go(11);}else if(e.key==='\\'){go(12);}
+    else if(e.key==='f'||e.key==='F'){toggleFS();}
+  });
+  document.getElementById('stage').addEventListener('click',(e)=>{
+    if(e.clientX<window.innerWidth*0.18)prev(); else next();
+  });
+  function toggleFS(){ if(!document.fullscreenElement)document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); else document.exitFullscreen&&document.exitFullscreen(); }
+
+  function fit(){ const s=Math.min(window.innerWidth/1280,window.innerHeight/720);
+    document.getElementById('stage').style.transform=`translate(-50%,-50%) scale(${s})`; }
+  window.addEventListener('resize',fit); fit();
+
+  const clock=new THREE.Clock();
+  function damp(c,t,l,dt){ return c+(t-c)*(1-Math.exp(-l*dt)); }
+
+  function tick(){
+    requestAnimationFrame(tick);
+    const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+
+    if(REDUCED){ camPos.copy(camPosT); camLook.copy(camLookT); }
+    else{
+      camPos.x=damp(camPos.x,camPosT.x,4.0,dt); camPos.y=damp(camPos.y,camPosT.y,4.0,dt); camPos.z=damp(camPos.z,camPosT.z,4.0,dt);
+      camLook.x=damp(camLook.x,camLookT.x,4.0,dt); camLook.y=damp(camLook.y,camLookT.y,4.0,dt); camLook.z=damp(camLook.z,camLookT.z,4.0,dt);
+    }
+    camera.position.copy(camPos); camera.lookAt(camLook);
+
+    scene.fog.color.r=damp(scene.fog.color.r,fogColT.r,3.0,dt);
+    scene.fog.color.g=damp(scene.fog.color.g,fogColT.g,3.0,dt);
+    scene.fog.color.b=damp(scene.fog.color.b,fogColT.b,3.0,dt);
+    scene.fog.density=damp(scene.fog.density,fogDensT,3.0,dt);
+    scene.background.copy(scene.fog.color);
+    const litT=SCENES[idx].dark?0.45:1.0;
+    key.intensity=damp(key.intensity,1.15*litT,3.0,dt);
+    hemi.intensity=damp(hemi.intensity,0.85*litT,3.0,dt);
+
+    react.metalSettle=damp(react.metalSettle,react.metalSettleT,3.2,dt);
+    react.inkAlign=damp(react.inkAlign,react.inkAlignT,2.6,dt);
+    react.spineRise=damp(react.spineRise,react.spineRiseT,2.4,dt);
+    react.duoTouch=damp(react.duoTouch,react.duoTouchT,2.4,dt);
+
+    if(idx===9&&!REDUCED){
+      inkAutoTimer+=dt;
+      if(inkAutoTimer>1.6){ inkAutoTimer=0; react.inkPattern=(react.inkPattern+1)%4; updateInkCaption(react.inkPattern); ink.setPattern(react.inkPattern); }
+    }
+
+    metal.update(t,react.metalSettle);
+    cast.update(react.metalSettle);
+    ink.update(t,react.inkAlign,SCENES[idx].dark);
+
+    // S12：二物質が触れ合う（中央へ寄ってすっと戻る）
+    const touch=react.duoTouch;
+    metal.mesh.position.x=damp(metal.mesh.position.x,-2.6+touch*1.8,3.0,dt);
+    ink.points.position.x=damp(ink.points.position.x,2.6-touch*1.8,3.0,dt);
+
+    if(react.spineRiseT>0.5||react.spineRise>0.02){ spine.mesh.visible=true; spine.update(react.spineRise); }
+    else spine.mesh.visible=false;
+
+    if(bokehPass){
+      const focusT=camPos.distanceTo(camLook);
+      bokehPass.uniforms['focus'].value=damp(bokehPass.uniforms['focus'].value,focusT,4.0,dt);
+      if(gv) gv.uniforms.uTime.value=t;
+    }
+
+    if(composer) composer.render(); else renderer.render(scene,camera);
+    fpsTick();
+  }
+  // fps計測：tick()が参照する前に初期化する（TDZ回避）
+  let _fc=0,_ft=performance.now(); window.__fps=0;
+  function fpsTick(){ _fc++; const n=performance.now(); if(n-_ft>=1000){ window.__fps=_fc; _fc=0; _ft=n; } }
+  tick();
+  window.__go=go; window.__renderer=renderer; window.__N=N;
+
+  setTimeout(()=>document.getElementById('loader').classList.add('gone'),500);
+
+  // ===================== factories =====================
+  function makeStudioEnv(){
+    const size=128, faces=[];
+    for(let i=0;i<6;i++){
+      const c=document.createElement('canvas'); c.width=c.height=size; const g=c.getContext('2d');
+      let top='#FBF8F0',bot='#E2DDD0';
+      if(i===2){top='#FFFDF6';bot='#FFFDF6';}
+      if(i===3){top='#D8D3C6';bot='#D8D3C6';}
+      const grd=g.createLinearGradient(0,0,0,size); grd.addColorStop(0,top); grd.addColorStop(1,bot);
+      g.fillStyle=grd; g.fillRect(0,0,size,size);
+      faces.push(c);
+    }
+    const tex=new THREE.CubeTexture(faces); tex.needsUpdate=true; tex.encoding=THREE.sRGBEncoding;
+    const pmrem=new THREE.PMREMGenerator(renderer);
+    const env=pmrem.fromCubemap(tex).texture; pmrem.dispose();
+    return env;
+  }
+
+  function makeMetal(envMap){
+    const geo=new THREE.IcosahedronGeometry(1.15,5);
+    const mat=new THREE.MeshStandardMaterial({color:0xD8D4CA,metalness:1.0,roughness:0.16,envMap:envMap,envMapIntensity:1.15});
+    mat.emissive=new THREE.Color(0x000000);
+    const uni={uTime:{value:0},uSettle:{value:0},uAmp:{value:0.10}};
+    mat.onBeforeCompile=(sh)=>{
+      sh.uniforms.uTime=uni.uTime; sh.uniforms.uSettle=uni.uSettle; sh.uniforms.uAmp=uni.uAmp;
+      sh.vertexShader=`uniform float uTime,uSettle,uAmp;\n${noiseGLSL}\n`+sh.vertexShader.replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+         float n=snoise(normal*1.3+uTime*0.16);
+         float n2=snoise(normal*2.6-uTime*0.10);
+         float disp=(n*0.7+n2*0.3);
+         float bulge=smoothstep(0.55,1.0,normal.y)*uSettle*0.45;
+         float amp=uAmp*(1.0-0.55*uSettle);
+         transformed+=normal*(disp*amp+bulge);`
+      );
+    };
+    const mesh=new THREE.Mesh(geo,mat);
+    return { mesh, update(t,settle){ uni.uTime.value=t; uni.uSettle.value=settle; mesh.rotation.y=t*0.04; } };
+  }
+
+  function makeCast(envMap){
+    // 金属が吐く語：板に文字をcanvasテクスチャで描き、金属反射マテリアルで成形
+    const cv=document.createElement('canvas'); cv.width=512; cv.height=256;
+    const ctx=cv.getContext('2d');
+    const tex=new THREE.CanvasTexture(cv); tex.encoding=THREE.sRGBEncoding;
+    const geo=new THREE.PlaneGeometry(2.0,1.0);
+    const mat=new THREE.MeshStandardMaterial({
+      color:0xD8D4CA,metalness:1.0,roughness:0.2,envMap:envMap,envMapIntensity:1.1,
+      map:tex,transparent:true,alphaMap:tex
+    });
+    const mesh=new THREE.Mesh(geo,mat);
+    function setText(s,scale){
+      ctx.clearRect(0,0,512,256);
+      ctx.fillStyle='#fff';
+      ctx.font='600 150px Fraunces, serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(s,256,135);
+      tex.needsUpdate=true;
+      mesh.scale.set(scale,scale,scale);
+    }
+    return { mesh, setText, update(settle){
+      mesh.material.opacity=settle;
+      mesh.material.roughness=0.4-0.22*settle;
+      mesh.position.y=0.7+0.3*settle;
+    }};
+  }
+
+  function makeInk(){
+    const COUNT=28000;
+    const pos=new Float32Array(COUNT*3), tgt=new Float32Array(COUNT*3), rnd=new Float32Array(COUNT);
+    for(let i=0;i<COUNT;i++){
+      const r=1.4*Math.cbrt(Math.random()), th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+      pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.sin(ph)*Math.sin(th)*0.8; pos[i*3+2]=r*Math.cos(ph);
+      rnd[i]=Math.random();
+    }
+    const geo=new THREE.BufferGeometry();
+    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+    geo.setAttribute('aTarget',new THREE.BufferAttribute(tgt,3));
+    geo.setAttribute('aRnd',new THREE.BufferAttribute(rnd,1));
+    const uni={uTime:{value:0},uAlign:{value:0},uSize:{value:2.2},uColor:{value:new THREE.Color('#16140F')},uDark:{value:0}};
+    const mat=new THREE.ShaderMaterial({
+      uniforms:uni,transparent:true,depthWrite:false,blending:THREE.NormalBlending,
+      vertexShader:`
+        uniform float uTime,uAlign,uSize; attribute vec3 aTarget; attribute float aRnd; varying float vA;
+        ${noiseGLSL}
+        void main(){
+          vec3 p=position;
+          float tt=uTime*0.12+aRnd*6.28;
+          vec3 drift=vec3(snoise(p*0.6+tt),snoise(p*0.6+tt+11.0),snoise(p*0.6+tt+23.0))*0.18;
+          vec3 wander=p+drift;
+          float radial=length(position);
+          float wave=smoothstep(0.0,1.0,uAlign*1.6-radial*0.25);
+          vec3 fin=mix(wander,aTarget,clamp(wave,0.0,1.0));
+          vA=0.16+0.20*aRnd+0.28*clamp(wave,0.0,1.0);
+          vec4 mv=modelViewMatrix*vec4(fin,1.0);
+          gl_PointSize=uSize*(300.0/-mv.z);
+          gl_Position=projectionMatrix*mv;
+        }`,
+      fragmentShader:`
+        uniform vec3 uColor; uniform float uDark; varying float vA;
+        void main(){
+          vec2 d=gl_PointCoord-0.5; float m=smoothstep(0.5,0.1,length(d));
+          vec3 col=mix(uColor,vec3(0.72,0.70,0.65),uDark*0.6);
+          gl_FragColor=vec4(col,vA*m);
+        }`
+    });
+    const points=new THREE.Points(geo,mat);
+    function setPattern(p){
+      const a=geo.attributes.aTarget.array;
+      for(let i=0;i<COUNT;i++){
+        let x,y,z; const u=i/COUNT, rr=rnd[i];
+        if(p===0){ const edge=Math.floor(rr*4); const s=(u*7.0)%1.0;
+          if(edge===0){x=-1.1+2.2*s;y=0.7;} else if(edge===1){x=1.1;y=0.7-1.4*s;}
+          else if(edge===2){x=1.1-2.2*s;y=-0.7;} else {x=-1.1;y=-0.7+1.4*s;} z=(rr-0.5)*0.15;
+        } else if(p===1){ const line=Math.floor(rr*11);
+          x=-1.3+2.6*((i*0.013)%1.0); y=0.85-line*0.16; z=(rr-0.5)*0.1; if(rr>0.985){y+=2.0;}
+        } else if(p===2){ const node=Math.floor(rr*3); const nx=[-1.0,1.0,0.0][node],ny=[0.6,0.6,-0.7][node];
+          if(rr*3-node<0.45){ const a2=u*6.28,rad=0.18*Math.sqrt((rr*3-node)/0.45); x=nx+Math.cos(a2)*rad; y=ny+Math.sin(a2)*rad; }
+          else { const seg=Math.floor((rr*3-node)/0.183)%3; const e=[[0,1],[1,2],[2,0]][seg]; const t2=((i*0.017)%1.0);
+            const NX=[-1.0,1.0,0.0],NY=[0.6,0.6,-0.7]; x=NX[e[0]]*(1-t2)+NX[e[1]]*t2; y=NY[e[0]]*(1-t2)+NY[e[1]]*t2; }
+          z=(rr-0.5)*0.12;
+        } else { const ang=u*6.28,rad=0.85+0.12*Math.sin(ang*5.0); x=Math.cos(ang)*rad; y=Math.sin(ang)*rad*0.78; z=(rr-0.5)*0.2; }
+        a[i*3]=x; a[i*3+1]=y; a[i*3+2]=z;
+      }
+      geo.attributes.aTarget.needsUpdate=true;
+    }
+    setPattern(0);
+    return { points, setPattern, update(t,align,dark){ uni.uTime.value=t; uni.uAlign.value=align; uni.uDark.value=dark?1:0; } };
+  }
+
+  function makeSpine(envMap){
+    const geo=new THREE.CylinderGeometry(0.07,0.07,3.4,14,1,true);
+    const mat=new THREE.MeshStandardMaterial({color:0xC8442A,metalness:0.3,roughness:0.4,emissive:0x000000,envMap:envMap,envMapIntensity:0.6,transparent:true,opacity:1});
+    const mesh=new THREE.Mesh(geo,mat);
+    return { mesh, update(rise){ mesh.scale.y=Math.max(0.001,rise); mesh.position.y=-1.7+1.7*rise; mesh.material.opacity=Math.min(1,rise*1.4); } };
+  }
+}
+
+// =====================================================================
+//  HUD（DOM文字）
+// =====================================================================
+function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstElementChild; }
+function sceneNode(id,dark,inner){ const c=el(`<div class="scene${dark?' on-dark':''}" data-id="${id}"></div>`); c.innerHTML=inner; return c; }
+
+function buildHUD(){
+  const hud=document.getElementById('hud');
+
+  hud.appendChild(sceneNode('S1',false,`
+    <div class="center-block">
+      <div class="el label" style="margin-bottom:28px">CHATGPT &nbsp;×&nbsp; GEMINI</div>
+      <div class="el display">その仕事、もう&nbsp;<span style="opacity:.2">◯</span>&nbsp;は<br>AI で いい。</div>
+      <div class="el lead" style="margin-top:30px">提案・仕様・実装の現場で、本当に使える5分。</div>
+    </div>
+    <div class="el meta-name"><span class="label">${NAME}</span><br><span class="caption">2026</span></div>
+  `));
+
+  hud.appendChild(sceneNode('S2',false,`
+    <div class="pad L72 T64 el"><span class="label">2人の同僚</span></div>
+    <div class="duo-left el"><div class="label" style="margin-bottom:10px">CHATGPT</div><div class="punch">書く・考える、<br>天才肌。</div></div>
+    <div class="duo-right el"><div class="label" style="margin-bottom:10px">GEMINI</div><div class="punch">調べる・束ねる、<br>情報番長。</div></div>
+  `));
+
+  hud.appendChild(sceneNode('S3',false,`
+    <div class="pad L72 T64 el"><span class="label">今日の地図</span></div>
+    <div class="map-list">
+      <div class="el lead" style="margin-bottom:20px">この2人は、あなたの仕事の隣で手伝える。</div>
+      <div class="el row"><span class="n">01</span><span class="t">提案</span></div>
+      <div class="el row"><span class="n">02</span><span class="t">要件定義</span></div>
+      <div class="el row"><span class="n">03</span><span class="t">仕様書</span></div>
+      <div class="el row"><span class="n">04</span><span class="t">実装の相棒</span></div>
+      <div class="el row"><span class="n">05</span><span class="t">調べ物</span></div>
+    </div>
+  `));
+
+  hud.appendChild(sceneNode('S4',false,`
+    <div class="center-block">
+      <div class="el label" style="margin-bottom:24px">CHAPTER 01</div>
+      <div class="el chapter">まず、明日から効く4つ。</div>
+    </div>
+  `));
+
+  const cases=[
+    {id:'S5',k:'01 ｜ キックオフの議事録＋要件', bf:'打ち合わせ後、録音を聞き直して30分かけて議事録。要件の拾い漏れ。',
+     af:'文字起こしを渡すだけ。<br>議事録＋"決定/宿題/要件"が一覧に。', gd:'※ 音声ファイルの直接添付は対象外。文字起こしテキストを貼って整理（全プラン可）。'},
+    {id:'S6',k:'02 ｜ 要望メール → 要件定義のたたき', bf:'ふわっとした要望メールから、要件と見積もりを手で起こす。抜け漏れが怖い。',
+     af:'要望を貼って「たたきと、<br>抜けてる確認質問を出して」。', gd:'※ テキスト貼り付けで全プラン可。'},
+    {id:'S7',k:'03 ｜ 提案書・構成のたたき', bf:'白紙の提案書の前で30分フリーズ。',
+     af:'「この業種のLP構成を、<br>目的とセクション付きで」。骨組みが10秒。', gd:'※ 全プランで可。埋めるのは人の仕事。'},
+    {id:'S8',k:'04 ｜ 実装の相棒', bf:'エラーで詰まる。正規表現やSQLでググり続ける。',
+     af:'エラー画面を見せれば直し方。<br>正規表現もSQLも「日本語で」頼める。', gd:'※ 画像入力・コード支援は全プランで可。'},
+  ];
+  cases.forEach(c=>{
+    hud.appendChild(sceneNode(c.id,false,`
+      <div class="kicker el"><span class="label">${c.k}</span></div>
+      <div class="before-box el"><div class="ttl">いま（BEFORE）</div><div class="txt">${c.bf}</div></div>
+      <div class="after-box"><div class="punch el">${c.af}</div></div>
+      <div class="guard el">${c.gd}</div>
+    `));
+  });
+
+  hud.appendChild(sceneNode('S9',true,`
+    <div class="center-block"><div class="el chapter">そんな使い方が、<br>あったのか。</div></div>
+    <div class="pad R72 B64 el"><span class="shu" style="font-size:40px">●</span></div>
+  `));
+
+  hud.appendChild(sceneNode('S10',true,`
+    <div class="pad L72 T64 el"><span class="label" style="color:#B7B2A6">そんな使い方が</span></div>
+    <div class="ink-cap" id="inkcap">
+      <div class="h">手書きラフを、コードに。</div>
+      <div class="d">手書きワイヤーの写真 → 画面構成・コンポーネントのたたき。</div>
+    </div>
+  `));
+
+  hud.appendChild(sceneNode('S11',false,`
+    <div class="pad L72 T64 el"><span class="label">使い分け（保存版）</span></div>
+    <div class="split-table">
+      <div class="row">
+        <div class="cell el"><div class="who">CHATGPT</div><div class="what">書く・考える・コードを書く</div></div>
+        <div class="cell el"><div class="who">GEMINI</div><div class="what">調べる・長文を読む・Google連携</div></div>
+      </div>
+      <div class="row">
+        <div class="cell el"><div class="who">CHATGPT</div><div class="what">画像・ラフを分析／案件を記憶</div></div>
+        <div class="cell el"><div class="who">GEMINI</div><div class="what">競合を自動調査／巨大資料を一括</div></div>
+      </div>
+    </div>
+    <div class="split-note el"><span class="lead">迷ったら、両方に同じ質問。良い方を採る。それでいい。</span></div>
+  `));
+
+  hud.appendChild(sceneNode('S12',false,`
+    <div class="center-block">
+      <div class="el caption" style="font-size:19px;margin-bottom:18px">ちなみに ──</div>
+      <div class="el lead" style="font-size:26px;color:var(--ink)">この5分の資料も、AIと一緒に作りました。</div>
+      <div class="el caption" style="margin-top:18px">専門のデザイナーは、入っていません。</div>
+    </div>
+  `));
+
+  hud.appendChild(sceneNode('S13',false,`
+    <div class="center-block">
+      <div class="el display" style="font-size:60px">AIは、仕事を奪わない。</div>
+      <div class="el punch" style="margin-top:26px">"作業"を奪って、あなたを<br>「<span class="shu">頼む側</span>」に変える。</div>
+      <div class="el caption" style="margin-top:34px;line-height:1.8">明日、1つ。次の提案書を、まず"頼んで"みる。<br>空いた時間で、人にしかできない仕事を。</div>
+    </div>
+  `));
+
+  hud.querySelector('[data-id="S1"]').classList.add('active');
+}
+
+function updateHUD(i){
+  const hud=document.getElementById('hud');
+  hud.querySelectorAll('.scene').forEach((s,k)=>s.classList.toggle('active',k===i));
+  const prog=document.getElementById('progress');
+  if(prog) prog.textContent=String(i+1).padStart(2,'0')+' / '+String(N).padStart(2,'0');
+}
+
+function updateInkCaption(p){
+  const caps=[
+    ['手書きラフを、コードに。','手書きワイヤーの写真 → 画面構成・コンポーネントのたたき。'],
+    ['分厚いRFPを、丸ごと。','数十ページの要件書を読み込ませ → 矛盾・抜けを抽出。'],
+    ['競合調査を、一晩で。','競合・業界を自動で深掘り → 出典つきレポート（Deep Research）。'],
+    ['自分専用の相棒に育てる。','案件名・社内用語・規約を覚えさせ → あなた仕様で賢くなる。'],
+  ];
+  const box=document.getElementById('inkcap'); if(!box)return;
+  box.style.opacity=0;
+  setTimeout(()=>{ box.querySelector('.h').textContent=caps[p][0]; box.querySelector('.d').textContent=caps[p][1]; box.style.transition='opacity .5s ease'; box.style.opacity=1; },220);
+}
+
+// =====================================================================
+//  静止ポスター
+// =====================================================================
+function buildPosters(){
+  const fb=document.getElementById('fallback');
+  const P=[
+    {dark:false,h:'その仕事、もう半分は AI でいい。',l:`ChatGPT と Gemini ── 提案・仕様・実装の現場で、本当に使える5分。&nbsp;&nbsp;${NAME} / 2026`,shu:'半分'},
+    {dark:false,h:'2人の同僚。',l:'ChatGPT ── 書く・考える、天才肌。／ Gemini ── 調べる・束ねる、情報番長。'},
+    {dark:false,h:'今日の地図。',l:'提案 ／ 要件定義 ／ 仕様書 ／ 実装の相棒 ／ 調べ物。'},
+    {dark:false,h:'まず、明日から効く4つ。',l:'Before → After。現場の手数が、半分になる。'},
+    {dark:false,h:'キックオフの議事録＋要件。',l:'文字起こしを渡すだけ。議事録＋"決定/宿題/要件"が一覧に。'},
+    {dark:false,h:'要望メール → 要件定義のたたき。',l:'要望を貼って「たたきと、抜けてる確認質問を出して」。'},
+    {dark:false,h:'提案書・構成のたたき。',l:'「この業種のLP構成を、目的とセクション付きで」。骨組みが10秒。'},
+    {dark:false,h:'実装の相棒。',l:'エラー画面を見せれば直し方。正規表現もSQLも「日本語で」頼める。'},
+    {dark:true,h:'そんな使い方が、あったのか。',l:'温白の基本から、墨へ。ここから意外な一手。',shu:'●'},
+    {dark:true,h:'手書きラフを、コードに。／ RFPを、丸ごと。',l:'競合調査を、一晩で。／ 自分専用の相棒に育てる。'},
+    {dark:false,h:'使い分け（保存版）。',l:'書く・考える・コード → ChatGPT ／ 調べる・長文・Google連携 → Gemini。'},
+    {dark:false,h:'この5分の資料も、AIと一緒に作りました。',l:'専門のデザイナーは、入っていません。'},
+    {dark:false,h:'AIは、仕事を奪わない。',l:'"作業"を奪って、あなたを「頼む側」に変える。空いた時間で、人にしかできない仕事を。',shu:'頼む側'},
+  ];
+  P.forEach(p=>{
+    let h=p.h,l=p.l;
+    if(p.shu&&h.includes(p.shu)) h=h.replace(p.shu,`<span class="pshu">${p.shu}</span>`);
+    if(p.shu&&l.includes(p.shu)) l=l.replace(p.shu,`<span class="pshu">${p.shu}</span>`);
+    fb.appendChild(el(`<div class="poster${p.dark?' dark':''}"><div class="pdisp">${h}</div><div class="plead">${l}</div></div>`));
+  });
+}
+</script>
+</body>
+</html>
