@@ -345,7 +345,7 @@ function boot(){
     // ゴースト英字（cast）は情報過多になるため廃止。金属の「確定」だけ維持する。
     if(['S1','S5','S6','S7','S8'].includes(s.id)){ react.metalSettleT=1; }
     if(s.id==='S10'){ react.inkAlignT=1; react.inkPattern=0; ink.setPattern(0); updateInkCaption(0); }
-    if(s.id==='S13'){ react.spineRiseT=1; }
+    // S13の朱の背骨（赤い棒）はkoki指示で廃止。spineRiseT=0のまま＝spineは表示されない。
     if(s.id==='S12'){ react.duoTouchT=1; }
 
     if(immediate||REDUCED){
@@ -681,7 +681,7 @@ function buildHUD(){
     <div class="center-block">
       <div class="el caption" style="font-size:19px;margin-bottom:18px">ちなみに ──</div>
       <div class="el lead" style="font-size:26px;color:var(--ink)">この5分の資料も、AIと一緒に作りました。</div>
-      <div class="el caption" style="margin-top:18px">専門のデザイナーは、入っていません。</div>
+      <div class="el caption" style="margin-top:18px;color:#5b5750">専門のデザイナーは、入っていません。</div>
     </div>
   `));
 
