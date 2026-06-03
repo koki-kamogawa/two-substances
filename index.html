@@ -307,7 +307,7 @@ function boot(){
   // カメラの旅（13停留点）
   const CAM={
     S1:{pos:[-2.6,0.25,4.4],look:[-2.6,0.2,0]},
-    S2:{pos:[0,1.05,9.4],look:[0,-0.75,0]},
+    S2:{pos:[0,0.5,8.6],look:[0,0.1,0]},
     S3:{pos:[0,7.2,1.2],look:[0,0,0]},
     S4:{pos:[-2.3,0.2,4.2],look:[-2.6,0.1,0]},
     S5:{pos:[-2.6,0.15,3.5],look:[-2.6,0.1,0]},
@@ -316,7 +316,7 @@ function boot(){
     S8:{pos:[-2.6,0.20,3.4],look:[-2.6,0.1,0]},
     S9:{pos:[0,0.3,6.2],look:[0,0.1,0]},
     S10:{pos:[2.6,0.2,4.0],look:[2.6,0.0,0]},
-    S11:{pos:[0,4.2,14.5],look:[0,-3.6,0]},
+    S11:{pos:[0,0.5,8.6],look:[0,0.1,0]},
     S12:{pos:[0,0.2,5.2],look:[0,0.05,0]},
     S13:{pos:[0,5.6,2.4],look:[0,0.2,0]},
   };
@@ -548,7 +548,9 @@ function boot(){
         uniform vec3 uColor; uniform float uDark; varying float vA;
         void main(){
           vec2 d=gl_PointCoord-0.5; float m=smoothstep(0.5,0.1,length(d));
-          vec3 col=mix(uColor,vec3(0.72,0.70,0.65),uDark*0.6);
+          vec3 darkCol=mix(uColor,vec3(0.72,0.70,0.65),0.6);  // 暗scene：原状（明るいインク）
+          vec3 lightCol=vec3(0.55,0.56,0.60);                  // 明scene：黒字が乗っても読めるミディアムグレー
+          vec3 col=mix(lightCol,darkCol,smoothstep(0.0,1.0,uDark));
           gl_FragColor=vec4(col,vA*m);
         }`
     });
