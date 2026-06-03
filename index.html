@@ -75,9 +75,12 @@
   .after-box .punch{font-size:37px;line-height:1.5;margin-bottom:14px}
   .guard{position:absolute;left:72px;bottom:48px;width:760px;font-size:16px;color:var(--gray);line-height:1.5}
 
-  .ink-cap{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);text-align:center;width:780px}
-  .ink-cap .h{font-size:38px;font-weight:600;color:var(--paper)}
-  .ink-cap .d{font-size:20px;color:#B7B2A6;margin-top:10px;font-weight:400}
+  .ink-cap{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);text-align:center;width:880px;z-index:2}
+  /* インク図形の上に文字が乗っても潰れないよう、文字の背後だけ柔らかい暗いスクリムを敷く */
+  .ink-cap::before{content:'';position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);width:1000px;height:340px;border-radius:50%;
+    background:radial-gradient(ellipse at center, rgba(8,7,6,.86) 0%, rgba(8,7,6,.55) 42%, rgba(8,7,6,0) 72%);z-index:-1;pointer-events:none}
+  .ink-cap .h{position:relative;font-size:38px;font-weight:600;color:var(--paper);text-shadow:0 2px 22px rgba(0,0,0,.55)}
+  .ink-cap .d{position:relative;font-size:20px;color:#D7D2C6;margin-top:12px;font-weight:400;text-shadow:0 1px 16px rgba(0,0,0,.6)}
   .ink-dots{position:absolute;left:50%;bottom:60px;transform:translateX(-50%);display:flex;gap:11px}
   .ink-dots i{width:7px;height:7px;border-radius:50%;background:rgba(244,241,234,.22);transition:background .4s ease,transform .4s ease}
   .ink-dots i.on{background:var(--shu);transform:scale(1.05)}
@@ -89,7 +92,7 @@
   .split-table .what{font-size:21px;font-weight:600;line-height:1.5}
   .split-note{position:absolute;left:50%;bottom:80px;transform:translateX(-50%);text-align:center}
 
-  .scene.on-dark .display,.scene.on-dark .chapter,.scene.on-dark .punch,.scene.on-dark .lead,.scene.on-dark .caption{color:var(--paper)}
+  .scene.on-dark .display,.scene.on-dark .chapter,.scene.on-dark .punch,.scene.on-dark .lead,.scene.on-dark .caption{color:var(--paper);text-shadow:0 2px 26px rgba(0,0,0,.5)}
   .scene.on-dark .gray{color:#B7B2A6}
 
   #grain{position:absolute;inset:0;pointer-events:none;opacity:.035;mix-blend-mode:multiply;
@@ -342,13 +345,8 @@ function boot(){
     react.metalSettleT=0; react.inkAlignT=0; react.spineRiseT=0; react.duoTouchT=0;
     cast.mesh.visible=false;
 
-    if(['S1','S5','S7','S8'].includes(s.id)){
-      react.metalSettleT=1;
-      cast.setText(castLatin[s.id], s.id==='S1'?1.0:0.78);
-      cast.mesh.position.set(metal.mesh.position.x,0.95,1.1);
-      cast.mesh.visible=true;
-    }
-    if(s.id==='S6'){ react.metalSettleT=1; }
+    // ゴースト英字（cast）は情報過多になるため廃止。金属の「確定」だけ維持する。
+    if(['S1','S5','S6','S7','S8'].includes(s.id)){ react.metalSettleT=1; }
     if(s.id==='S10'){ react.inkAlignT=1; react.inkPattern=0; ink.setPattern(0); updateInkCaption(0); }
     if(s.id==='S13'){ react.spineRiseT=1; }
     if(s.id==='S12'){ react.duoTouchT=1; }
@@ -553,7 +551,7 @@ function boot(){
         uniform vec3 uColor; uniform float uDark; varying float vA;
         void main(){
           vec2 d=gl_PointCoord-0.5; float m=smoothstep(0.5,0.1,length(d));
-          vec3 col=mix(uColor,vec3(0.72,0.70,0.65),uDark*0.6);
+          vec3 col=mix(uColor,vec3(0.50,0.48,0.44),uDark*0.6);
           gl_FragColor=vec4(col,vA*m);
         }`
     });
@@ -601,7 +599,7 @@ function buildHUD(){
   hud.appendChild(sceneNode('S1',false,`
     <div class="center-block">
       <div class="el label" style="margin-bottom:28px">CHATGPT &nbsp;×&nbsp; GEMINI</div>
-      <div class="el display">その仕事、もう&nbsp;<span style="opacity:.2">◯</span>&nbsp;は<br>AI で いい。</div>
+      <div class="el display">その仕事、もう半分は<br>AI で いい。</div>
       <div class="el lead" style="margin-top:30px">提案・仕様・実装の現場で、本当に使える5分。</div>
     </div>
     <div class="el meta-name"><span class="label">${NAME}</span><br><span class="caption">2026</span></div>
