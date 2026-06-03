@@ -71,13 +71,16 @@
   .before-box{position:absolute;left:72px;top:240px;width:430px}
   .before-box .ttl{font-family:"Fraunces",serif;font-size:18px;letter-spacing:.12em;color:var(--gray);margin-bottom:14px}
   .before-box .txt{font-size:23px;color:var(--gray);line-height:1.7;font-weight:400}
-  .after-box{position:absolute;right:72px;bottom:120px;width:560px;text-align:right}
-  .after-box .punch{margin-bottom:14px}
+  .after-box{position:absolute;right:72px;bottom:116px;width:680px;text-align:right}
+  .after-box .punch{font-size:37px;line-height:1.5;margin-bottom:14px}
   .guard{position:absolute;left:72px;bottom:48px;width:760px;font-size:16px;color:var(--gray);line-height:1.5}
 
   .ink-cap{position:absolute;left:50%;bottom:96px;transform:translateX(-50%);text-align:center;width:780px}
   .ink-cap .h{font-size:38px;font-weight:600;color:var(--paper)}
   .ink-cap .d{font-size:20px;color:#B7B2A6;margin-top:10px;font-weight:400}
+  .ink-dots{position:absolute;left:50%;bottom:60px;transform:translateX(-50%);display:flex;gap:11px}
+  .ink-dots i{width:7px;height:7px;border-radius:50%;background:rgba(244,241,234,.22);transition:background .4s ease,transform .4s ease}
+  .ink-dots i.on{background:var(--shu);transform:scale(1.05)}
 
   .split-table{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);width:880px}
   .split-table .row{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin:12px 0}
@@ -362,7 +365,15 @@ function boot(){
   applyScene(0,true);
 
   function go(n){ n=Math.max(0,Math.min(N-1,n)); if(n===idx)return; idx=n; inkAutoTimer=0; applyScene(idx,REDUCED); }
-  function next(){ go(idx+1); } function prev(){ go(idx-1); }
+  // S10（idx9）の「そんな使い方が」4連発は、自動でなく1クリック=次の1手で送る。4手目の後に次シーンへ。
+  function next(){
+    if(idx===9 && react.inkPattern<3){ react.inkPattern++; updateInkCaption(react.inkPattern); ink.setPattern(react.inkPattern); return; }
+    go(idx+1);
+  }
+  function prev(){
+    if(idx===9 && react.inkPattern>0){ react.inkPattern--; updateInkCaption(react.inkPattern); ink.setPattern(react.inkPattern); return; }
+    go(idx-1);
+  }
 
   window.addEventListener('keydown',(e)=>{
     if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter'||e.key==='PageDown'){e.preventDefault();next();}
@@ -409,10 +420,7 @@ function boot(){
     react.spineRise=damp(react.spineRise,react.spineRiseT,2.4,dt);
     react.duoTouch=damp(react.duoTouch,react.duoTouchT,2.4,dt);
 
-    if(idx===9&&!REDUCED){
-      inkAutoTimer+=dt;
-      if(inkAutoTimer>1.6){ inkAutoTimer=0; react.inkPattern=(react.inkPattern+1)%4; updateInkCaption(react.inkPattern); ink.setPattern(react.inkPattern); }
-    }
+    // S10の4連発は手動送り（next/prevで切替）。自動巡回は廃止。
 
     metal.update(t,react.metalSettle);
     cast.update(react.metalSettle);
@@ -504,9 +512,9 @@ function boot(){
       mesh.scale.set(scale,scale,scale);
     }
     return { mesh, setText, update(settle){
-      mesh.material.opacity=settle;
+      mesh.material.opacity=settle*0.9;
       mesh.material.roughness=0.4-0.22*settle;
-      mesh.position.y=0.7+0.3*settle;
+      mesh.position.y=0.30+0.18*settle;   // 確定時y=0.48。上端が画面外に切れないよう下げた
     }};
   }
 
@@ -625,14 +633,14 @@ function buildHUD(){
   `));
 
   const cases=[
-    {id:'S5',k:'01 ｜ キックオフの議事録＋要件', bf:'打ち合わせ後、録音を聞き直して30分かけて議事録。要件の拾い漏れ。',
-     af:'文字起こしを渡すだけ。<br>議事録＋"決定/宿題/要件"が一覧に。', gd:'※ 音声ファイルの直接添付は対象外。文字起こしテキストを貼って整理（全プラン可）。'},
-    {id:'S6',k:'02 ｜ 要望メール → 要件定義のたたき', bf:'ふわっとした要望メールから、要件と見積もりを手で起こす。抜け漏れが怖い。',
-     af:'要望を貼って「たたきと、<br>抜けてる確認質問を出して」。', gd:'※ テキスト貼り付けで全プラン可。'},
-    {id:'S7',k:'03 ｜ 提案書・構成のたたき', bf:'白紙の提案書の前で30分フリーズ。',
-     af:'「この業種のLP構成を、<br>目的とセクション付きで」。骨組みが10秒。', gd:'※ 全プランで可。埋めるのは人の仕事。'},
-    {id:'S8',k:'04 ｜ 実装の相棒', bf:'エラーで詰まる。正規表現やSQLでググり続ける。',
-     af:'エラー画面を見せれば直し方。<br>正規表現もSQLも「日本語で」頼める。', gd:'※ 画像入力・コード支援は全プランで可。'},
+    {id:'S5',k:'01 ｜ キックオフの議事録＋要件', bf:'打ち合わせ後、録音を聞き直して<br>30分かけて議事録。要件は拾い漏れる。',
+     af:'文字起こしを渡すだけ。<br>議事録＋"決定・宿題・要件"が、<br>一覧で返る。', gd:'※ 音声ファイルの直接添付は対象外。文字起こしテキストを貼って整理（全プラン可）。'},
+    {id:'S6',k:'02 ｜ 要望メール → 要件定義のたたき', bf:'ふわっとした要望メールから、<br>要件と見積もりを手で起こす。<br>抜け漏れが怖い。',
+     af:'要望を貼って、こう頼む。<br>「たたきと、抜け漏れの<br>確認質問も出して」。', gd:'※ テキスト貼り付けで全プラン可。'},
+    {id:'S7',k:'03 ｜ 提案書・構成のたたき', bf:'白紙の提案書の前で、<br>30分フリーズ。',
+     af:'「この業種のLP構成を、<br>目的とセクション付きで」。<br>骨組みが、10秒。', gd:'※ 全プランで可。埋めるのは人の仕事。'},
+    {id:'S8',k:'04 ｜ 実装の相棒', bf:'エラーで詰まる。正規表現や<br>SQLをググり続ける。',
+     af:'エラー画面を見せれば、<br>直し方が返ってくる。<br>正規表現もSQLも「日本語で」。', gd:'※ 画像入力・コード支援は全プランで可。'},
   ];
   cases.forEach(c=>{
     hud.appendChild(sceneNode(c.id,false,`
@@ -654,6 +662,7 @@ function buildHUD(){
       <div class="h">手書きラフを、コードに。</div>
       <div class="d">手書きワイヤーの写真 → 画面構成・コンポーネントのたたき。</div>
     </div>
+    <div class="ink-dots" id="inkdots"><i class="on"></i><i></i><i></i><i></i></div>
   `));
 
   hud.appendChild(sceneNode('S11',false,`
@@ -704,6 +713,8 @@ function updateInkCaption(p){
     ['競合調査を、一晩で。','競合・業界を自動で深掘り → 出典つきレポート（Deep Research）。'],
     ['自分専用の相棒に育てる。','案件名・社内用語・規約を覚えさせ → あなた仕様で賢くなる。'],
   ];
+  const dots=document.getElementById('inkdots');
+  if(dots) dots.querySelectorAll('i').forEach((d,k)=>d.classList.toggle('on',k<=p));
   const box=document.getElementById('inkcap'); if(!box)return;
   box.style.opacity=0;
   setTimeout(()=>{ box.querySelector('.h').textContent=caps[p][0]; box.querySelector('.d').textContent=caps[p][1]; box.style.transition='opacity .5s ease'; box.style.opacity=1; },220);
